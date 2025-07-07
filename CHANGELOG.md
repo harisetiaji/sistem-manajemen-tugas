@@ -4,6 +4,17 @@ Semua perubahan penting pada proyek ini akan didokumentasikan di file ini.
 
 Format yang digunakan didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [5.0.0] - 2025-07-08
+
+### Added
+- Fitur pengeditan in-place untuk teks tugas, warna kartu, dan label penanggung jawab langsung di papan Kanban.
+- Tombol pemilihan warna solid untuk pembuatan kartu baru.
+
+### Changed
+- Desain tombol aksi kartu (hapus dan ubah warna) diperbarui menjadi ikon yang lebih ringkas dan diposisikan ulang untuk estetika yang lebih baik.
+- Alur penambahan tugas baru dioptimalkan untuk pengalaman pengguna yang lebih intuitif.
+- Peningkatan visual pada latar belakang aplikasi dan tata letak kontainer.
+
 ## [4.0.0] - 2025-07-08
 
 ### Added

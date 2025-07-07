@@ -17,7 +17,7 @@ $action = $_GET['action'] ?? '';
 try {
     switch ($method) {
         case 'GET':
-            $stmt = $pdo->prepare("SELECT id, teks, selesai, status FROM tugas WHERE user_id = ? ORDER BY tanggal_dibuat DESC");
+            $stmt = $pdo->prepare("SELECT id, teks, selesai, status, card_color, assignee_label FROM tugas WHERE user_id = ? ORDER BY tanggal_dibuat DESC");
             $stmt->execute([$userId]);
             $tugas = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['status' => 'success', 'data' => $tugas]);
@@ -28,8 +28,10 @@ try {
             
             if ($action === 'update') {
                 $id = $data['id'] ?? 0;
-                $selesai = $data['selesai'] ?? null; // Can be null if not updating 'selesai'
-                $status = $data['status'] ?? null; // New status field
+                $selesai = $data['selesai'] ?? null;
+                $status = $data['status'] ?? null;
+                $cardColor = $data['card_color'] ?? null;
+                $assigneeLabel = $data['assignee_label'] ?? null;
 
                 $updateFields = [];
                 $params = [];
@@ -41,6 +43,14 @@ try {
                 if ($status !== null) {
                     $updateFields[] = 'status = ?';
                     $params[] = $status;
+                }
+                if ($cardColor !== null) {
+                    $updateFields[] = 'card_color = ?';
+                    $params[] = $cardColor;
+                }
+                if ($assigneeLabel !== null) {
+                    $updateFields[] = 'assignee_label = ?';
+                    $params[] = $assigneeLabel;
                 }
 
                 if (empty($updateFields)) {
@@ -57,13 +67,15 @@ try {
 
             } else {
                 $teks = $data['teks'] ?? '';
+                $cardColor = $data['card_color'] ?? '#ffffff'; // Default white
+                $assigneeLabel = $data['assignee_label'] ?? null;
+
                 if (empty($teks)) throw new Exception('Teks tugas tidak boleh kosong.');
 
-                // New tasks start with 'inisiasi' status
-                $stmt = $pdo->prepare("INSERT INTO tugas (teks, user_id, status) VALUES (?, ?, 'inisiasi')");
-                $stmt->execute([$teks, $userId]);
+                $stmt = $pdo->prepare("INSERT INTO tugas (teks, user_id, status, card_color, assignee_label) VALUES (?, ?, 'inisiasi', ?, ?)");
+                $stmt->execute([$teks, $userId, $cardColor, $assigneeLabel]);
                 $newId = $pdo->lastInsertId();
-                echo json_encode(['status' => 'success', 'data' => ['id' => $newId, 'teks' => $teks, 'selesai' => false, 'status' => 'inisiasi']]);
+                echo json_encode(['status' => 'success', 'data' => ['id' => $newId, 'teks' => $teks, 'selesai' => false, 'status' => 'inisiasi', 'card_color' => $cardColor, 'assignee_label' => $assigneeLabel]]);
             }
             break;
 

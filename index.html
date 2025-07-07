@@ -17,6 +17,19 @@
         <main id="app-container" class="hidden">
             <form id="form-tugas">
                 <input type="text" id="input-tugas" placeholder="Tambahkan tugas baru..." required>
+                <input type="text" id="input-assignee" placeholder="Assignee (optional)">
+                <div class="color-picker-buttons" id="color-picker-buttons">
+                    <button type="button" class="color-btn color-white active" data-color="#ffffff" title="Default"></button>
+                    <button type="button" class="color-btn color-red" data-color="#ffcccc" title="Red"></button>
+                    <button type="button" class="color-btn color-green" data-color="#ccffcc" title="Green"></button>
+                    <button type="button" class="color-btn color-blue" data-color="#ccccff" title="Blue"></button>
+                    <button type="button" class="color-btn color-yellow" data-color="#ffffcc" title="Yellow"></button>
+                    <button type="button" class="color-btn color-purple" data-color="#ffccff" title="Purple"></button>
+                    <button type="button" class="color-btn color-cyan" data-color="#ccffff" title="Cyan"></button>
+                    <button type="button" class="color-btn color-pink" data-color="#ff99cc" title="Pink"></button>
+                    <button type="button" class="color-btn color-light-green" data-color="#99ff99" title="Light Green"></button>
+                    <button type="button" class="color-btn color-light-blue" data-color="#99ccff" title="Light Blue"></button>
+                </div>
                 <button type="submit">Tambah</button>
             </form>
             <div class="kanban-board">

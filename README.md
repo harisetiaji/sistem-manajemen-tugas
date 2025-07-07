@@ -8,6 +8,8 @@ Sebuah aplikasi web sederhana untuk mengelola tugas harian. Aplikasi ini dibuat 
 - **Manajemen Tugas Pribadi:** Setiap pengguna hanya dapat melihat dan mengelola tugas miliknya sendiri.
 - **Operasi CRUD:** Menambah, melihat, menandai selesai, dan menghapus tugas secara dinamis tanpa me-refresh halaman.
 - **Papan Kanban:** Visualisasikan dan kelola tugas menggunakan pendekatan papan Kanban dengan kolom 'Inisiasi', 'Progress', 'Done', dan 'Archived'. Tugas dapat dipindahkan antar kolom melalui drag-and-drop.
+- **Pengeditan In-Place:** Edit teks tugas, warna kartu, dan label penanggung jawab langsung dari kartu di papan Kanban.
+- **Desain Responsif & Modern:** Tampilan aplikasi yang diperbarui dengan latar belakang gradien yang menarik dan tata letak yang lebih intuitif.
 
 ## Teknologi yang Digunakan
 
@@ -62,6 +64,8 @@ Proyek ini memerlukan lingkungan server PHP, Composer, dan kredensial OAuth dari
       selesai BOOLEAN NOT NULL DEFAULT FALSE,
       tanggal_dibuat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       status ENUM('inisiasi', 'progress', 'done', 'archived') DEFAULT 'inisiasi',
+      card_color VARCHAR(7) DEFAULT '#ffffff',
+      assignee_label VARCHAR(50) DEFAULT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
     ```
