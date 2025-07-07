@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const authContainer = document.getElementById('auth-container');
+    const appContainer = document.getElementById('app-container');
     const formTugas = document.getElementById('form-tugas');
     const inputTugas = document.getElementById('input-tugas');
     const daftarTugas = document.getElementById('daftar-tugas');
@@ -6,9 +8,59 @@ document.addEventListener('DOMContentLoaded', () => {
     const api = 'api.php';
 
     /**
-     * Merender daftar tugas ke dalam DOM dari data server.
-     * @param {Array} tugas - Array objek tugas dari database.
+     * Memeriksa status login ke server.
      */
+    async function checkLoginStatus() {
+        try {
+            const response = await fetch('check_session.php'); // Kita perlu membuat file ini
+            const session = await response.json();
+
+            if (session.loggedIn) {
+                displayApp(session.nama);
+                muatTugas();
+            } else {
+                displayLoginButtons();
+            }
+        } catch (error) {
+            displayLoginButtons();
+        }
+    }
+
+    function displayLoginButtons() {
+        appContainer.classList.add('hidden');
+        authContainer.innerHTML = `
+            <p>Silakan login untuk melanjutkan</p>
+            <button onclick="location.href='login.php?provider=google'" class="login-btn google-btn">Login dengan Google</button>
+            <button onclick="location.href='login.php?provider=github'" class="login-btn github-btn">Login dengan GitHub</button>
+        `;
+    }
+
+    function displayApp(nama) {
+        appContainer.classList.remove('hidden');
+        authContainer.innerHTML = `
+            <div id="user-info">
+                <span>Selamat datang, <strong>${nama}</strong>!</span>
+                <a href="logout.php">Logout</a>
+            </div>
+        `;
+    }
+
+    // ... (Fungsi muatTugas, tambahTugas, hapusTugas, toggleSelesai tetap sama seperti sebelumnya)
+    async function muatTugas() {
+        try {
+            const response = await fetch(api);
+            const result = await response.json();
+            if (result.status === 'success') {
+                renderTugas(result.data);
+            } else {
+                // Jika API mengembalikan error (misal: sesi habis), tampilkan login
+                displayLoginButtons();
+            }
+        } catch (error) {
+            console.error('Tidak dapat terhubung ke server.');
+        }
+    }
+
     function renderTugas(tugas) {
         daftarTugas.innerHTML = '';
         tugas.forEach(item => {
@@ -16,16 +68,15 @@ document.addEventListener('DOMContentLoaded', () => {
             li.textContent = item.teks;
             li.dataset.id = item.id;
 
-            if (item.selesai == 1) { // MySQL boolean bisa jadi 1 atau 0
+            if (item.selesai == 1) {
                 li.classList.add('selesai');
             }
 
-            // Tombol hapus
             const hapusBtn = document.createElement('button');
             hapusBtn.textContent = 'Hapus';
             hapusBtn.classList.add('hapus-btn');
             hapusBtn.onclick = (e) => {
-                e.stopPropagation(); // Mencegah event klik pada <li>
+                e.stopPropagation();
                 hapusTugas(item.id);
             };
 
@@ -35,27 +86,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * Mengambil semua tugas dari server.
-     */
-    async function muatTugas() {
-        try {
-            const response = await fetch(api);
-            const result = await response.json();
-            if (result.status === 'success') {
-                renderTugas(result.data);
-            } else {
-                alert('Error: ' + result.message);
-            }
-        } catch (error) {
-            alert('Tidak dapat terhubung ke server.');
-        }
-    }
-
-    /**
-     * Menambah tugas baru ke database.
-     * @param {Event} e - Event dari form submission.
-     */
     async function tambahTugas(e) {
         e.preventDefault();
         const teksTugas = inputTugas.value.trim();
@@ -69,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const result = await response.json();
                 if (result.status === 'success') {
                     inputTugas.value = '';
-                    muatTugas(); // Muat ulang semua tugas
+                    muatTugas();
                 } else {
                     alert('Error: ' + result.message);
                 }
@@ -79,10 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Menghapus tugas dari database.
-     * @param {number} id - ID tugas yang akan dihapus.
-     */
     async function hapusTugas(id) {
         try {
             const response = await fetch(`${api}?id=${id}`, {
@@ -99,11 +125,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Mengubah status selesai/belum selesai sebuah tugas.
-     * @param {number} id - ID tugas yang akan diubah.
-     * @param {boolean} status - Status baru (true untuk selesai, false untuk belum).
-     */
     async function toggleSelesai(id, status) {
         try {
             const response = await fetch(`${api}?action=update`, {
@@ -124,6 +145,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     formTugas.addEventListener('submit', tambahTugas);
 
-    // Muat tugas saat halaman pertama kali dibuka
-    muatTugas();
+    // Panggil fungsi untuk memeriksa status login saat halaman dimuat
+    checkLoginStatus();
 });

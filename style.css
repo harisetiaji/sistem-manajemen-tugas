@@ -65,6 +65,37 @@ header h1 {
     color: #888;
 }
 
+#auth-container {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.login-btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    margin: 5px;
+    font-size: 16px;
+}
+
+.google-btn {
+    background-color: #DB4437;
+}
+
+.github-btn {
+    background-color: #333;
+}
+
+#user-info {
+    font-size: 16px;
+}
+
+.hidden {
+    display: none;
+}
+
 .hapus-btn {
     background: #dc3545;
     color: white;
