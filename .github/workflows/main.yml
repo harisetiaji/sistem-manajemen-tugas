@@ -1,0 +1,33 @@
+name: CI/CD Pipeline Sederhana
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repositori
+      uses: actions/checkout@v3
+
+    - name: Verifikasi file proyek
+      run: |
+        echo "Memeriksa keberadaan file..."
+        if [ ! -f index.html ]; then exit 1; fi
+        if [ ! -f style.css ]; then exit 1; fi
+        if [ ! -f script.js ]; then exit 1; fi
+        echo "Semua file utama ditemukan."
+
+    - name: Setup GitHub Pages
+      uses: actions/configure-pages@v2
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v1
+      with:
+        path: '.'
+
+    - name: Deploy ke GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v1
