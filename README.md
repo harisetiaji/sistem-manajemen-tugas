@@ -7,6 +7,7 @@ Sebuah aplikasi web sederhana untuk mengelola tugas harian. Aplikasi ini dibuat 
 - **Autentikasi Pengguna:** Login dan registrasi *seamless* menggunakan akun Google dan GitHub (OAuth2).
 - **Manajemen Tugas Pribadi:** Setiap pengguna hanya dapat melihat dan mengelola tugas miliknya sendiri.
 - **Operasi CRUD:** Menambah, melihat, menandai selesai, dan menghapus tugas secara dinamis tanpa me-refresh halaman.
+- **Papan Kanban:** Visualisasikan dan kelola tugas menggunakan pendekatan papan Kanban dengan kolom 'Inisiasi', 'Progress', 'Done', dan 'Archived'. Tugas dapat dipindahkan antar kolom melalui drag-and-drop.
 
 ## Teknologi yang Digunakan
 
@@ -60,13 +61,14 @@ Proyek ini memerlukan lingkungan server PHP, Composer, dan kredensial OAuth dari
       teks VARCHAR(255) NOT NULL,
       selesai BOOLEAN NOT NULL DEFAULT FALSE,
       tanggal_dibuat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      status ENUM('inisiasi', 'progress', 'done', 'archived') DEFAULT 'inisiasi',
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
     ```
 
 ### 4. Konfigurasi Kredensial & Database
 1.  **Buat Aplikasi OAuth** di [Google Cloud Console](https://console.cloud.google.com/apis/credentials) dan [GitHub Developer Settings](https://github.com/settings/developers).
-2.  Saat membuat, gunakan URL callback berikut: `http://localhost/sistem-manajemen-tugas/callback.php`.
+2.  Saat membuat, gunakan URL callback berikut: `http://localhost:8888/sistem-manajemen-tugas/callback.php`.
 3.  **Buat file `.env`:** Salin file `.env.example` menjadi `.env` di root proyek Anda.
     ```bash
     cp .env.example .env
@@ -86,7 +88,7 @@ Proyek ini memerlukan lingkungan server PHP, Composer, dan kredensial OAuth dari
 
 ### 5. Jalankan Aplikasi
 - Tempatkan folder proyek di dalam direktori `htdocs` server Anda.
-- Buka aplikasi melalui browser: `http://localhost/sistem-manajemen-tugas/`.
+- Buka aplikasi melalui browser: `http://localhost:8888/sistem-manajemen-tugas/`.
 
 ## Struktur Proyek
 

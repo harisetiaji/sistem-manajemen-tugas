@@ -1,4 +1,8 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // Mulai session di setiap halaman
 session_start();
 
@@ -24,7 +28,7 @@ define('GITHUB_CLIENT_ID', $_ENV['GITHUB_CLIENT_ID']);
 define('GITHUB_CLIENT_SECRET', $_ENV['GITHUB_CLIENT_SECRET']);
 
 // URL Redirect (harus sama dengan yang didaftarkan di Google/GitHub)
-define('REDIRECT_URL', 'http://localhost/sistem-manajemen-tugas/callback.php');
+define('REDIRECT_URL', 'http://localhost:8888/sistem-manajemen-tugas/callback.php');
 
 // Membuat koneksi PDO
 try {

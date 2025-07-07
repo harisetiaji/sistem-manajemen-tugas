@@ -4,6 +4,20 @@ Semua perubahan penting pada proyek ini akan didokumentasikan di file ini.
 
 Format yang digunakan didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [4.0.0] - 2025-07-08
+
+### Added
+- Implementasi papan Kanban (Trello-like) dengan kolom 'Inisiasi', 'Progress', 'Done', dan 'Archived'.
+- Kolom `status` baru ditambahkan ke tabel `tugas` di database.
+- Fungsionalitas drag-and-drop untuk memindahkan tugas antar kolom Kanban.
+
+### Changed
+- Struktur `index.html` diperbarui untuk mendukung tata letak papan Kanban.
+- `style.css` diperbarui dengan gaya untuk papan Kanban, kolom, dan kartu.
+- `api.php` diperbarui untuk menangani kolom `status` baru dan pembaruan status tugas.
+- `script.js` diperbarui untuk merender tugas sebagai kartu Kanban yang dapat di-drag-and-drop.
+- Perbaikan pengalihan setelah login/logout dari `index.php` ke `index.html` di `login.php`, `callback.php`, dan `logout.php`.
+
 ## [3.0.0] - 2025-07-08
 
 ### Added

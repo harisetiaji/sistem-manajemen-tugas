@@ -17,7 +17,7 @@ $action = $_GET['action'] ?? '';
 try {
     switch ($method) {
         case 'GET':
-            $stmt = $pdo->prepare("SELECT id, teks, selesai FROM tugas WHERE user_id = ? ORDER BY tanggal_dibuat DESC");
+            $stmt = $pdo->prepare("SELECT id, teks, selesai, status FROM tugas WHERE user_id = ? ORDER BY tanggal_dibuat DESC");
             $stmt->execute([$userId]);
             $tugas = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['status' => 'success', 'data' => $tugas]);
@@ -28,20 +28,42 @@ try {
             
             if ($action === 'update') {
                 $id = $data['id'] ?? 0;
-                $selesai = $data['selesai'] ?? false;
+                $selesai = $data['selesai'] ?? null; // Can be null if not updating 'selesai'
+                $status = $data['status'] ?? null; // New status field
 
-                $stmt = $pdo->prepare("UPDATE tugas SET selesai = ? WHERE id = ? AND user_id = ?");
-                $stmt->execute([$selesai, $id, $userId]);
+                $updateFields = [];
+                $params = [];
+
+                if ($selesai !== null) {
+                    $updateFields[] = 'selesai = ?';
+                    $params[] = $selesai;
+                }
+                if ($status !== null) {
+                    $updateFields[] = 'status = ?';
+                    $params[] = $status;
+                }
+
+                if (empty($updateFields)) {
+                    throw new Exception('Tidak ada data untuk diperbarui.');
+                }
+
+                $sql = "UPDATE tugas SET " . implode(', ', $updateFields) . " WHERE id = ? AND user_id = ?";
+                $params[] = $id;
+                $params[] = $userId;
+
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
                 echo json_encode(['status' => 'success']);
 
             } else {
                 $teks = $data['teks'] ?? '';
                 if (empty($teks)) throw new Exception('Teks tugas tidak boleh kosong.');
 
-                $stmt = $pdo->prepare("INSERT INTO tugas (teks, user_id) VALUES (?, ?)");
+                // New tasks start with 'inisiasi' status
+                $stmt = $pdo->prepare("INSERT INTO tugas (teks, user_id, status) VALUES (?, ?, 'inisiasi')");
                 $stmt->execute([$teks, $userId]);
                 $newId = $pdo->lastInsertId();
-                echo json_encode(['status' => 'success', 'data' => ['id' => $newId, 'teks' => $teks, 'selesai' => false]]);
+                echo json_encode(['status' => 'success', 'data' => ['id' => $newId, 'teks' => $teks, 'selesai' => false, 'status' => 'inisiasi']]);
             }
             break;
 

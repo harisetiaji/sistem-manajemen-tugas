@@ -5,6 +5,6 @@ require_once 'config.php';
 session_destroy();
 
 // Redirect ke halaman utama
-header('Location: index.php');
+header('Location: index.html');
 exit;
 ?>

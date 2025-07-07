@@ -19,9 +19,24 @@
                 <input type="text" id="input-tugas" placeholder="Tambahkan tugas baru..." required>
                 <button type="submit">Tambah</button>
             </form>
-            <ul id="daftar-tugas">
-                <!-- Daftar tugas akan ditampilkan di sini -->
-            </ul>
+            <div class="kanban-board">
+                <div class="kanban-column" id="column-inisiasi" data-status="inisiasi">
+                    <h2>Inisiasi</h2>
+                    <div class="kanban-cards"></div>
+                </div>
+                <div class="kanban-column" id="column-progress" data-status="progress">
+                    <h2>Progress</h2>
+                    <div class="kanban-cards"></div>
+                </div>
+                <div class="kanban-column" id="column-done" data-status="done">
+                    <h2>Done</h2>
+                    <div class="kanban-cards"></div>
+                </div>
+                <div class="kanban-column" id="column-archived" data-status="archived">
+                    <h2>Archived</h2>
+                    <div class="kanban-cards"></div>
+                </div>
+            </div>
         </main>
     </div>
     <script src="script.js"></script>

@@ -63,7 +63,7 @@ try {
     $_SESSION['user_nama'] = $oauthUser->getName();
 
     // Redirect kembali ke halaman utama
-    header('Location: index.php');
+    header('Location: index.html');
     exit;
 
 } catch (Exception $e) {
