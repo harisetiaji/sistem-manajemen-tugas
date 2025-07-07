@@ -1,354 +1,365 @@
+/* === Global & Layout === */
 body {
-    font-family: sans-serif;
-    background: linear-gradient(to right, #6a11cb 0%, #2575fc 100%); /* A nice gradient background */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: #f4f5f7;
+    color: #172b4d;
     margin: 0;
-    padding: 0;
-    display: flex; /* Keep flex for initial centering, but adjust for fullscreen */
-    flex-direction: column; /* Stack content vertically */
-    min-height: 100vh;
-    color: #333;
+    line-height: 1.5;
 }
 
 .container {
-    background: rgba(255, 255, 255, 0.95); /* Slightly transparent white background for content */
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    width: 95%; /* Make it wider */
-    max-width: 1400px; /* Increased max-width for Kanban board */
-    margin: 20px auto; /* Center the container with some top/bottom margin */
-    flex-grow: 1; /* Allow container to grow and fill space */
+    padding: 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    background-color: rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px;
 }
 
 header h1 {
-    text-align: center;
-    color: #333;
-    margin-bottom: 25px;
+    font-size: 1.5em;
+    color: #fff;
 }
 
-#form-tugas {
+#app-container.hidden { display: none; }
+
+/* === Auth & User Info === */
+#auth-container, #user-info {
+    padding: 10px;
+}
+
+#user-info {
+    color: #fff;
+}
+
+#user-info a {
+    color: #fff;
+    text-decoration: underline;
+    margin-left: 10px;
+}
+
+/* === Project Toolbar === */
+.project-toolbar {
     display: flex;
-    flex-wrap: wrap; /* Allow items to wrap to the next line */
-    margin-bottom: 20px;
-    gap: 10px; /* Add gap between form elements */
     align-items: center;
+    gap: 20px;
+    padding: 0 10px 15px 10px;
 }
 
-#form-tugas input[type="text"] {
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 16px;
+.project-selector label {
+    font-weight: bold;
+    margin-right: 8px;
 }
 
-#input-tugas {
-    flex: 1;
-    min-width: 200px; /* Ensure it doesn't get too small */
+#project-dropdown {
+    padding: 8px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
 }
 
-#input-assignee {
-    width: 150px; /* Fixed width for assignee input */
-}
-
-.color-picker-buttons {
-    display: flex;
-    gap: 5px;
-    flex-wrap: wrap; /* Allow color buttons to wrap */
-}
-
-.color-btn {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%; /* Make them circular */
-    border: 2px solid #ccc;
-    cursor: pointer;
-    transition: border-color 0.2s ease, transform 0.2s ease;
-    position: relative; /* For tooltip */
-}
-
-/* Specific classes for each color */
-.color-white { background-color: #ffffff; }
-.color-red { background-color: #ffcccc; }
-.color-green { background-color: #ccffcc; }
-.color-blue { background-color: #ccccff; }
-.color-yellow { background-color: #ffffcc; }
-.color-purple { background-color: #ffccff; }
-.color-cyan { background-color: #ccffff; }
-.color-pink { background-color: #ff99cc; }
-.color-light-green { background-color: #99ff99; }
-.color-light-blue { background-color: #99ccff; }
-
-.color-btn:hover {
-    transform: scale(1.1);
-}
-
-.color-btn.active {
-    border-color: #007bff; /* Highlight active color */
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5); /* Add a glow */
-}
-
-/* Tooltip for color buttons */
-.color-btn::before {
-    content: attr(title);
-    position: absolute;
-    bottom: 120%;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #333;
+#new-project-btn {
+    padding: 8px 12px;
+    background-color: #5aac44;
     color: white;
-    padding: 5px 8px;
-    border-radius: 4px;
-    font-size: 0.8em;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-    z-index: 10;
-}
-
-.color-btn:hover::before {
-    opacity: 1;
-    visibility: visible;
-}
-
-#form-tugas button {
-    padding: 12px 20px;
     border: none;
-    background-color: #28a745;
-    color: white;
-    border-radius: 5px;
+    border-radius: 3px;
     cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.2s;
 }
 
-#form-tugas button:hover {
-    background-color: #218838;
-}
+#new-project-btn:hover { background-color: #61bd4f; }
 
-/* Kanban Board Styles */
+/* === Kanban Board === */
 .kanban-board {
     display: flex;
-    gap: 20px;
-    overflow-x: auto; /* Allow horizontal scrolling if columns exceed width */
-    padding-bottom: 10px; /* Space for scrollbar */
-    margin-top: 20px;
+    gap: 15px;
+    align-items: flex-start; /* Align columns to the top */
+    overflow-x: auto; /* Allow horizontal scrolling */
+    padding: 10px;
+    height: calc(100vh - 200px); /* Adjust height to fill screen */
 }
 
 .kanban-column {
-    flex: 0 0 300px; /* Slightly wider columns */
-    background-color: #e2e4e6;
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex: 0 0 280px; /* Fixed width for columns */
+    background-color: #ebecf0;
+    border-radius: 3px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
+    max-height: 100%;
 }
 
 .kanban-column h2 {
-    font-size: 1.3em;
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: #333;
-    text-align: center;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ccc;
+    font-size: 1em;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+    padding: 0 5px;
 }
 
 .kanban-cards {
-    min-height: 100px; /* Ensure drop target is visible and flexible */
     flex-grow: 1;
+    min-height: 20px;
+    overflow-y: auto; /* Allow vertical scroll within columns */
+    padding: 0 5px;
 }
 
+/* === Kanban Card === */
 .kanban-card {
     background-color: #fff;
-    border-radius: 5px;
-    padding: 12px;
-    margin-bottom: 10px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-    cursor: grab;
-    display: flex;
-    flex-direction: column; /* Stack content vertically */
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    position: relative; /* For absolute positioning of action buttons */
+    border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(9,30,66,.25);
+    padding: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
-.kanban-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+.kanban-card:hover { background-color: #f4f5f7; }
+.kanban-card.dragging { transform: rotate(3deg); opacity: 0.8; }
+
+/* === Card Actions === */
+.card-actions {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    display: none; /* Hidden by default */
+    background-color: #f4f5f7;
+    border-radius: 3px;
+    padding: 2px;
 }
 
-.kanban-card.dragging {
-    opacity: 0.5;
-    border: 2px dashed #007bff;
-    transform: scale(1.02); /* Slightly enlarge when dragging */
+.kanban-card:hover .card-actions {
+    display: flex; /* Show on hover */
+    gap: 2px;
 }
 
-.kanban-card .card-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start; /* Align items to the top */
+.card-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 14px;
+    color: #42526e;
+    border-radius: 3px;
+}
+
+.card-actions button:hover { background-color: #dfe1e6; }
+
+.edit-input {
     width: 100%;
+    box-sizing: border-box;
 }
 
-.kanban-card .card-text {
-    flex-grow: 1;
-    margin-right: 10px;
-    word-break: break-word; /* Prevent long words from overflowing */
-    font-weight: bold;
+/* === Color Palette === */
+.color-edit-palette {
+    position: absolute;
+    background: white;
+    border: 1px solid #ccc;
+    padding: 5px;
+    border-radius: 3px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 10;
+    display: flex;
+    gap: 3px;
 }
 
-.kanban-card.selesai .card-text {
-    text-decoration: line-through;
-    color: #888;
+.color-edit-palette button {
+    width: 25px;
+    height: 25px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    cursor: pointer;
 }
+
+.color-edit-palette button.active { border-color: #007bff; }
 
 .assignee-label {
     background-color: #007bff;
     color: white;
-    padding: 3px 8px;
+    padding: 2px 6px;
     border-radius: 3px;
     font-size: 0.75em;
-    margin-top: 5px; /* Space between text and label */
-    align-self: flex-end; /* Align to the right within the card */
+    margin-top: 8px;
+    align-self: flex-start;
+    cursor: pointer;
 }
 
-/* Card Actions (Delete and Color Edit) */
-.card-actions {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    display: flex;
-    gap: 5px;
-    z-index: 1; /* Ensure buttons are clickable */
-}
-
-.delete-card-btn {
-    background: #dc3545; /* Red background for delete */
+.add-assignee-btn {
+    background-color: #6c757d;
     color: white;
     border: none;
-    border-radius: 50%; /* Circular button */
-    width: 24px;
-    height: 24px;
-    font-size: 0.9em;
-    font-weight: bold;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 0.75em;
     cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    margin-top: 8px;
+    align-self: flex-start;
     transition: background-color 0.2s ease;
 }
 
-.delete-card-btn:hover {
-    background-color: #c82333;
-}
+.add-assignee-btn:hover { background-color: #5a6268; }
 
-.color-edit-btn {
-    background-color: transparent; /* Will be set by JS based on card color */
-    border: 1px solid #ccc;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
+
+/* === Add Card & Group Buttons/Forms === */
+.add-card-btn, .add-group-btn {
+    background: none;
+    border: none;
+    color: #5e6c84;
     cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 0.8em;
-    color: #333; /* Icon color */
-    transition: border-color 0.2s ease;
+    padding: 8px;
+    text-align: left;
+    width: 100%;
+    border-radius: 3px;
+    margin-top: 5px;
 }
 
-.color-edit-btn:hover {
-    border-color: #007bff;
+.add-card-btn:hover, .add-group-btn:hover { background-color: rgba(9,30,66,.08); }
+
+.add-group-btn {
+    flex-shrink: 0;
+    width: 280px;
+    background-color: rgba(0,0,0,0.1);
 }
 
-/* Color edit palette */
-.color-edit-palette {
-    position: absolute;
-    top: 30px; /* Adjust position relative to the card */
-    right: 5px;
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 5px;
+.add-group-form-container {
+    flex: 0 0 280px;
+    background-color: #ebecf0;
+    border-radius: 3px;
     padding: 10px;
     display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    z-index: 100; /* Ensure it's above other elements */
+    flex-direction: column;
+    gap: 8px;
 }
 
-.color-edit-palette .color-btn {
+.add-group-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
+    border-radius: 3px;
+    padding: 8px;
+    box-shadow: 0 1px 0 rgba(9,30,66,.25);
+}
+
+.add-group-submit-btn {
+    background-color: #5aac44;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 6px 12px;
+    cursor: pointer;
+}
+
+
+.add-card-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
+    border-radius: 3px;
+    padding: 8px;
+    box-shadow: 0 1px 0 rgba(9,30,66,.25);
+    margin-bottom: 8px;
+    resize: vertical;
+}
+
+.add-card-assignee-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
+    border-radius: 3px;
+    padding: 8px;
+    box-shadow: 0 1px 0 rgba(9,30,66,.25);
+    margin-bottom: 8px; /* Added margin for spacing */
+}
+
+.add-card-form .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.add-card-color-picker {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 8px;
+}
+
+.add-card-color-picker .color-btn {
     width: 25px;
     height: 25px;
     border-radius: 50%;
-    border: 1px solid #eee;
+    border: 1px solid #ccc;
     cursor: pointer;
 }
 
-.color-edit-palette .color-btn.active {
-    border-color: #007bff;
+.add-card-color-picker .color-btn.active {
+    border: 2px solid #007bff;
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.5);
 }
 
-#auth-container {
-    text-align: center;
-    margin-top: 10px;
-    margin-bottom: 25px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #eee;
-}
-
-.login-btn {
-    padding: 12px 25px;
-    border: none;
-    border-radius: 5px;
+.add-card-form button[type="submit"] {
+    background-color: #5aac44;
     color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 6px 12px;
     cursor: pointer;
-    margin: 8px;
-    font-size: 17px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.login-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+.add-card-form .cancel-btn {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: #6b778c;
 }
 
-.google-btn {
-    background-color: #DB4437;
+/* === Modal === */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
 }
 
-.google-btn:hover {
-    background-color: #c23321;
+.modal-content {
+    background: #f4f5f7;
+    padding: 20px;
+    border-radius: 3px;
+    width: 90%;
+    max-width: 400px;
+    position: relative;
 }
 
-.github-btn {
-    background-color: #333;
+.modal-close-btn {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: none; border: none;
+    font-size: 1.5em; cursor: pointer; color: #6b778c;
 }
 
-.github-btn:hover {
-    background-color: #000;
+#new-project-form input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-sizing: border-box;
 }
 
-#user-info {
-    font-size: 18px;
-    margin-bottom: 25px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #eee;
-}
-
-#user-info a {
-    color: #007bff;
-    text-decoration: none;
-    margin-left: 15px;
-    transition: color 0.3s ease;
-}
-
-#user-info a:hover {
-    color: #0056b3;
-}
-
-.hidden {
-    display: none;
+#new-project-form button {
+    padding: 10px 15px;
+    background-color: #5aac44;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
 }

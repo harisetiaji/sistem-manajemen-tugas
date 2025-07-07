@@ -1,37 +1,54 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // === DOM ELEMENTS ===
     const authContainer = document.getElementById('auth-container');
     const appContainer = document.getElementById('app-container');
-    const formTugas = document.getElementById('form-tugas');
-    const inputTugas = document.getElementById('input-tugas');
-    const inputAssignee = document.getElementById('input-assignee');
-    const colorPickerButtons = document.getElementById('color-picker-buttons');
+    const projectDropdown = document.getElementById('project-dropdown');
+    const newProjectBtn = document.getElementById('new-project-btn');
+    const kanbanBoard = document.getElementById('kanban-board');
+    const newProjectModal = document.getElementById('new-project-modal');
+    const newProjectForm = document.getElementById('new-project-form');
+    const closeProjectModalBtn = document.getElementById('close-project-modal');
+    const newProjectNameInput = document.getElementById('new-project-name');
 
-    let selectedColor = '#ffffff'; // Default color
+    // === STATE ===
+    let projects = [];
+    let currentProjectId = null;
+    let draggedCard = null;
 
     const api = 'api.php';
 
-    // Get Kanban column containers
-    const columns = {
-        inisiasi: document.getElementById('column-inisiasi').querySelector('.kanban-cards'),
-        progress: document.getElementById('column-progress').querySelector('.kanban-cards'),
-        done: document.getElementById('column-done').querySelector('.kanban-cards'),
-        archived: document.getElementById('column-archived').querySelector('.kanban-cards'),
-    };
+    // === API HELPERS ===
+    async function apiCall(action, method = 'GET', body = null, params = '') {
+        const url = `${api}?action=${action}${params}`;
+        const options = {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+        };
+        if (body) {
+            options.body = JSON.stringify(body);
+        }
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || `HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error(`API call failed for action [${action}]:`, error);
+            alert(`Error: ${error.message}`);
+            return null;
+        }
+    }
 
-    let draggedCard = null;
-
-    /**
-     * Memeriksa status login ke server.
-     */
+    // === INITIALIZATION ===
     async function checkLoginStatus() {
         try {
-            const response = await fetch('http://localhost:8888/sistem-manajemen-tugas/check_session.php');
+            const response = await fetch('check_session.php');
             const session = await response.json();
-            console.log('Session status:', session);
-
             if (session.loggedIn) {
                 displayApp(session.nama);
-                muatTugas();
+                await loadProjects();
             } else {
                 displayLoginButtons();
             }
@@ -44,378 +61,461 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayLoginButtons() {
         appContainer.classList.add('hidden');
         authContainer.innerHTML = `
-            <p>Silakan login untuk melanjutkan</p>
-            <button onclick="location.href='login.php?provider=google'" class="login-btn google-btn">Login dengan Google</button>
-            <button onclick="location.href='login.php?provider=github'" class="login-btn github-btn">Login dengan GitHub</button>
+            <p>Please log in to continue</p>
+            <button onclick="location.href='login.php?provider=google'">Login with Google</button>
+            <button onclick="location.href='login.php?provider=github'">Login with GitHub</button>
         `;
     }
 
-    function displayApp(nama) {
+    function displayApp(userName) {
         appContainer.classList.remove('hidden');
         authContainer.innerHTML = `
             <div id="user-info">
-                <span>Selamat datang, <strong>${nama}</strong>!</span>
+                <span>Welcome, <strong>${userName}</strong>!</span>
                 <a href="logout.php">Logout</a>
             </div>
         `;
     }
 
-    async function muatTugas() {
-        try {
-            const response = await fetch(api);
-            const result = await response.json();
-            if (result.status === 'success') {
-                renderTugas(result.data);
+    // === PROJECT MANAGEMENT ===
+    async function loadProjects() {
+        const result = await apiCall('get_projects');
+        if (result && result.status === 'success') {
+            projects = result.data;
+            renderProjectDropdown();
+            if (projects.length > 0) {
+                currentProjectId = projects[0].id;
+                projectDropdown.value = currentProjectId;
+                await loadBoard(currentProjectId);
             } else {
-                console.error('Error loading tasks:', result.message);
-                displayLoginButtons();
+                // Handle case with no projects yet
+                kanbanBoard.innerHTML = '<p>No projects found. Create one to get started!</p>';
             }
-        } catch (error) {
-            console.error('Tidak dapat terhubung ke server.', error);
         }
     }
 
-    function renderTugas(tugas) {
-        // Clear all columns first
-        Object.values(columns).forEach(col => (col.innerHTML = ''));
-
-        tugas.forEach(item => {
-            const card = document.createElement('div');
-            card.classList.add('kanban-card');
-            card.setAttribute('draggable', 'true');
-            card.dataset.id = item.id;
-            card.dataset.status = item.status;
-            card.dataset.color = item.card_color; // Store color
-            card.dataset.assignee = item.assignee_label; // Store assignee
-
-            // Apply card color
-            card.style.borderLeft = `5px solid ${item.card_color || '#ffffff'}`;
-
-            const cardContent = document.createElement('div');
-            cardContent.classList.add('card-content');
-
-            const cardText = document.createElement('span');
-            cardText.classList.add('card-text');
-            cardText.textContent = item.teks;
-            cardText.title = "Click to edit task"; // Add tooltip
-            cardText.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent card drag from starting
-                makeEditable(cardText, item.id, 'teks', item.teks);
-            });
-
-            if (item.selesai == 1) {
-                card.classList.add('selesai');
-                cardText.classList.add('selesai');
-            }
-
-            cardContent.appendChild(cardText);
-
-            const cardFooter = document.createElement('div');
-            cardFooter.classList.add('card-footer');
-
-            if (item.assignee_label) {
-                const assigneeLabel = document.createElement('span');
-                assigneeLabel.classList.add('assignee-label');
-                assigneeLabel.textContent = item.assignee_label;
-                assigneeLabel.title = "Click to edit assignee"; // Add tooltip
-                assigneeLabel.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent card drag from starting
-                    makeEditable(assigneeLabel, item.id, 'assignee_label', item.assignee_label);
-                });
-                cardFooter.appendChild(assigneeLabel);
-            }
-
-            // Card actions container (for delete and color edit buttons)
-            const cardActions = document.createElement('div');
-            cardActions.classList.add('card-actions');
-
-            // Color edit button (now an icon)
-            const colorEditBtn = document.createElement('button');
-            colorEditBtn.classList.add('color-edit-btn');
-            colorEditBtn.innerHTML = '&#x25A0;'; // Unicode square for color swatch
-            colorEditBtn.title = "Change card color";
-            colorEditBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                makeColorEditable(card, item.id, item.card_color);
-            });
-            cardActions.appendChild(colorEditBtn);
-
-            // Delete button (now an 'X' icon)
-            const deleteBtn = document.createElement('button');
-            deleteBtn.classList.add('delete-card-btn');
-            deleteBtn.innerHTML = '&times;'; // Unicode 'X' character
-            deleteBtn.title = "Delete task";
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation();
-                hapusTugas(item.id);
-            };
-            cardActions.appendChild(deleteBtn);
-
-            card.appendChild(cardActions); // Add actions to the card directly
-            card.appendChild(cardContent);
-            card.appendChild(cardFooter);
-
-            // Add drag event listeners
-            card.addEventListener('dragstart', () => {
-                draggedCard = card;
-                card.classList.add('dragging');
-            });
-
-            card.addEventListener('dragend', () => {
-                draggedCard = null;
-                card.classList.remove('dragging');
-            });
-
-            // Append card to the correct column
-            if (columns[item.status]) {
-                columns[item.status].appendChild(card);
-            } else {
-                console.warn(`Unknown status for task ${item.id}: ${item.status}`);
-                columns.inisiasi.appendChild(card); // Default to inisiasi
-            }
+    function renderProjectDropdown() {
+        projectDropdown.innerHTML = '';
+        projects.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p.id;
+            option.textContent = p.project_name;
+            projectDropdown.appendChild(option);
         });
     }
 
-    async function makeEditable(element, taskId, field, currentValue) {
-        // Prevent multiple edits or drag during edit
-        if (element.querySelector('input.edit-input')) return;
+    async function createNewProject(e) {
+        e.preventDefault();
+        const projectName = newProjectNameInput.value.trim();
+        if (!projectName) return;
 
+        const result = await apiCall('create_project', 'POST', { project_name: projectName });
+        if (result && result.status === 'success') {
+            newProjectNameInput.value = '';
+            toggleProjectModal(false);
+            await loadProjects(); // Reload all projects
+            // Switch to the new project
+            currentProjectId = result.data.id;
+            projectDropdown.value = currentProjectId;
+            await loadBoard(currentProjectId);
+        }
+    }
+
+    function toggleProjectModal(show) {
+        newProjectModal.style.display = show ? 'flex' : 'none';
+    }
+
+    // === BOARD & CARD RENDERING ===
+    async function loadBoard(projectId) {
+        currentProjectId = projectId;
+        const result = await apiCall('get_board_data', 'GET', null, `&project_id=${projectId}`);
+        if (result && result.status === 'success') {
+            renderBoard(result.data.groups, result.data.tasks);
+        }
+    }
+
+    function renderBoard(groups, tasksByGroup) {
+        kanbanBoard.innerHTML = ''; // Clear the board
+
+        groups.forEach(group => {
+            const column = createKanbanColumn(group);
+            const cardsContainer = column.querySelector('.kanban-cards');
+            
+            const tasks = tasksByGroup[group.id] || [];
+            tasks.forEach(taskData => {
+                const card = createKanbanCard(taskData);
+                cardsContainer.appendChild(card);
+            });
+
+            kanbanBoard.appendChild(column);
+        });
+
+        // Add "Add New Group" button
+        const addGroupBtn = document.createElement('button');
+        addGroupBtn.textContent = '+ Add another list';
+        addGroupBtn.classList.add('add-group-btn');
+        kanbanBoard.appendChild(addGroupBtn);
+
+        // Event listener for adding new group
+        addGroupBtn.addEventListener('click', () => {
+            const formContainer = document.createElement('div');
+            formContainer.className = 'add-group-form-container';
+            formContainer.innerHTML = `
+                <input type="text" placeholder="Enter list title..." class="add-group-input">
+                <div class="form-actions">
+                    <button type="submit" class="add-group-submit-btn">Add list</button>
+                    <button type="button" class="cancel-btn">&times;</button>
+                </div>
+            `;
+            kanbanBoard.appendChild(formContainer);
+            addGroupBtn.style.display = 'none';
+
+            const groupInput = formContainer.querySelector('.add-group-input');
+            groupInput.focus();
+
+            formContainer.querySelector('.add-group-submit-btn').addEventListener('click', async () => {
+                const groupName = groupInput.value.trim();
+                if (groupName && currentProjectId) {
+                    await apiCall('create_card_group', 'POST', { project_id: currentProjectId, group_name: groupName });
+                    await loadBoard(currentProjectId); // Reload board to show new group
+                }
+            });
+
+            formContainer.querySelector('.cancel-btn').addEventListener('click', () => {
+                formContainer.remove();
+                addGroupBtn.style.display = 'block';
+            });
+        });
+    }
+
+    function createKanbanColumn(group) {
+        const column = document.createElement('div');
+        column.className = 'kanban-column';
+        column.dataset.groupId = group.id;
+        column.innerHTML = `
+            <h2>${group.group_name}</h2>
+            <div class="kanban-cards"></div>
+            <div class="add-card-form-container"></div>
+            <button class="add-card-btn">+ Add a card</button>
+        `;
+
+        // Event listener for showing the add card form
+        const addCardBtn = column.querySelector('.add-card-btn');
+        const formContainer = column.querySelector('.add-card-form-container');
+        addCardBtn.addEventListener('click', () => {
+            showAddCardForm(formContainer, group.id);
+            addCardBtn.style.display = 'none';
+        });
+
+        // Drag and drop listeners
+        column.addEventListener('dragover', e => e.preventDefault());
+        column.addEventListener('drop', handleCardDrop);
+
+        return column;
+    }
+
+    function createKanbanCard(taskData) {
+        const card = document.createElement('div');
+        card.className = 'kanban-card';
+        card.draggable = true;
+        card.dataset.taskId = taskData.id;
+        card.dataset.groupId = taskData.group_id;
+
+        // Apply card color
+        card.style.borderLeft = `5px solid ${taskData.card_color || '#ffffff'}`;
+
+        const cardText = document.createElement('span');
+        cardText.textContent = taskData.teks;
+
+        card.appendChild(cardText);
+
+        // Add assignee label or a button to add one
+        const assigneeContainer = document.createElement('div');
+        assigneeContainer.className = 'assignee-container';
+        card.appendChild(assigneeContainer);
+
+        const renderAssignee = (assigneeName) => {
+            assigneeContainer.innerHTML = ''; // Clear previous content
+            if (assigneeName) {
+                const assigneeLabel = document.createElement('div');
+                assigneeLabel.className = 'assignee-label';
+                assigneeLabel.textContent = assigneeName;
+                assigneeLabel.title = 'Click to edit assignee';
+                assigneeLabel.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    makeEditable(assigneeLabel, taskData.id, 'assignee_label', assigneeName, (newLabel) => renderAssignee(newLabel));
+                });
+                assigneeContainer.appendChild(assigneeLabel);
+            } else {
+                const addAssigneeBtn = document.createElement('button');
+                addAssigneeBtn.className = 'add-assignee-btn';
+                addAssigneeBtn.textContent = '+ Add Assignee';
+                addAssigneeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const newAssigneeLabel = document.createElement('div');
+                    newAssigneeLabel.className = 'assignee-label';
+                    addAssigneeBtn.replaceWith(newAssigneeLabel);
+                    makeEditable(newAssigneeLabel, taskData.id, 'assignee_label', '', (newLabel) => renderAssignee(newLabel));
+                });
+                assigneeContainer.appendChild(addAssigneeBtn);
+            }
+        };
+
+        renderAssignee(taskData.assignee_label);
+
+        // Drag listeners for the card
+        card.addEventListener('dragstart', e => {
+            draggedCard = e.target;
+            e.dataTransfer.setData('text/plain', taskData.id);
+            setTimeout(() => card.classList.add('dragging'), 0);
+        });
+        card.addEventListener('dragend', () => card.classList.remove('dragging'));
+
+        // Click listener for history
+        card.addEventListener('click', (e) => {
+            // Ensure the click is not on an interactive element
+            if (e.target.matches('button') || e.target.matches('input') || e.target.closest('.card-actions')) {
+                return;
+            }
+            showTaskHistory(taskData.id, taskData.teks);
+        });
+
+        // Action buttons
+        const cardActions = document.createElement('div');
+        cardActions.className = 'card-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.innerHTML = '&#9998;'; // Pencil icon
+        editBtn.title = 'Edit task text';
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            makeEditable(card.querySelector('span'), taskData.id, 'teks', taskData.teks);
+        });
+
+        const colorBtn = document.createElement('button');
+        colorBtn.innerHTML = '&#127912;'; // Palette icon
+        colorBtn.title = 'Change color';
+        colorBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            makeColorEditable(card, taskData.id, taskData.card_color);
+        });
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerHTML = '&times;';
+        deleteBtn.title = 'Delete task';
+        deleteBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (confirm('Are you sure you want to delete this task?')) {
+                await apiCall('delete_task', 'GET', null, `&task_id=${taskData.id}`);
+                await loadBoard(currentProjectId);
+            }
+        });
+
+        cardActions.appendChild(editBtn);
+        cardActions.appendChild(colorBtn);
+        cardActions.appendChild(deleteBtn);
+        card.appendChild(cardActions);
+
+        return card;
+    }
+
+    // === CARD ACTIONS (Add, Move) ===
+    function showAddCardForm(container, groupId) {
+        let selectedColor = '#ffffff'; // Default color for the new card
+        const form = document.createElement('form');
+        form.className = 'add-card-form';
+
+        const colors = ['#ffffff', '#ffcccc', '#ccffcc', '#ccccff', '#ffffcc', '#ffccff', '#ccffff'];
+        let colorPickerHtml = '<div class="add-card-color-picker">';
+        colors.forEach(color => {
+            colorPickerHtml += `<button type="button" class="color-btn ${color === selectedColor ? 'active' : ''}" data-color="${color}" style="background-color: ${color};"></button>`;
+        });
+        colorPickerHtml += '</div>';
+
+        form.innerHTML = `
+            <textarea placeholder="Enter a title for this card..." required></textarea>
+            <input type="text" class="add-card-assignee-input" placeholder="Assignee (optional)">
+            ${colorPickerHtml}
+            <div class="form-actions">
+                <button type="submit">Add card</button>
+                <button type="button" class="cancel-btn">&times;</button>
+            </div>
+        `;
+        container.appendChild(form);
+
+        const textarea = form.querySelector('textarea');
+        const assigneeInput = form.querySelector('.add-card-assignee-input');
+        textarea.focus();
+
+        const colorPicker = form.querySelector('.add-card-color-picker');
+        colorPicker.addEventListener('click', (e) => {
+            if (e.target.classList.contains('color-btn')) {
+                const currentActive = colorPicker.querySelector('.active');
+                if (currentActive) currentActive.classList.remove('active');
+                e.target.classList.add('active');
+                selectedColor = e.target.dataset.color;
+            }
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const teks = textarea.value.trim();
+            const assigneeLabel = assigneeInput.value.trim();
+            if (teks) {
+                await apiCall('create_task', 'POST', { teks, group_id: groupId, card_color: selectedColor, assignee_label: assigneeLabel || null });
+                await loadBoard(currentProjectId);
+            }
+        });
+
+        form.querySelector('.cancel-btn').addEventListener('click', () => {
+            container.innerHTML = '';
+            container.closest('.kanban-column').querySelector('.add-card-btn').style.display = 'block';
+        });
+    }
+
+    async function handleCardDrop(e) {
+        e.preventDefault();
+        if (!draggedCard) return;
+
+        const toColumn = e.target.closest('.kanban-column');
+        if (!toColumn) return;
+
+        const taskId = draggedCard.dataset.taskId;
+        const oldGroupId = draggedCard.dataset.groupId;
+        const newGroupId = toColumn.dataset.groupId;
+
+        if (oldGroupId !== newGroupId) {
+            // Move card in UI immediately for responsiveness
+            toColumn.querySelector('.kanban-cards').appendChild(draggedCard);
+            draggedCard.dataset.groupId = newGroupId;
+
+            // Call API to update backend
+            await apiCall('move_task', 'POST', { task_id: taskId, old_group_id: oldGroupId, new_group_id: newGroupId });
+            // No full reload needed, but could re-validate if necessary
+        }
+    }
+
+    // === EVENT LISTENERS ===
+    projectDropdown.addEventListener('change', () => {
+        const newId = projectDropdown.value;
+        if (newId !== currentProjectId) {
+            loadBoard(newId);
+        }
+    });
+
+    newProjectBtn.addEventListener('click', () => toggleProjectModal(true));
+    closeProjectModalBtn.addEventListener('click', () => toggleProjectModal(false));
+    newProjectForm.addEventListener('submit', createNewProject);
+    window.addEventListener('click', (e) => {
+        if (e.target === newProjectModal) {
+            toggleProjectModal(false);
+        }
+        if (e.target === document.getElementById('task-history-modal')) {
+            toggleHistoryModal(false);
+        }
+    });
+
+    document.getElementById('close-history-modal').addEventListener('click', () => toggleHistoryModal(false));
+
+    // === HISTORY MODAL ===
+    const historyModal = document.getElementById('task-history-modal');
+    const historyContent = document.getElementById('history-content');
+
+    function toggleHistoryModal(show) {
+        historyModal.style.display = show ? 'flex' : 'none';
+    }
+
+    async function showTaskHistory(taskId, taskText) {
+        const result = await apiCall('get_task_history', 'GET', null, `&task_id=${taskId}`);
+        if (result && result.status === 'success') {
+            let html = `<h4>History for: ${taskText}</h4><ul>`;
+            if (result.data.length === 0) {
+                html += '<li>No history found.</li>';
+            } else {
+                result.data.forEach(entry => {
+                    const date = new Date(entry.timestamp).toLocaleString();
+                    html += `<li>${date}: <strong>${entry.nama}</strong> moved from <strong>${entry.old_group}</strong> to <strong>${entry.new_group}</strong></li>`;
+                });
+            }
+            html += '</ul>';
+            historyContent.innerHTML = html;
+            toggleHistoryModal(true);
+        }
+    }
+
+    // === STARTUP ===
+    checkLoginStatus();
+
+    // === EDITABLE FUNCTIONS ===
+    function makeEditable(element, taskId, field, currentValue, onSaveCallback) {
         const input = document.createElement('input');
         input.type = 'text';
         input.value = currentValue;
-        input.classList.add('edit-input');
+        input.className = 'edit-input';
 
         element.replaceWith(input);
         input.focus();
 
         const saveChanges = async () => {
             const newValue = input.value.trim();
-            if (newValue !== currentValue) {
-                const updateData = { id: taskId };
-                updateData[field] = newValue;
-                await updateTaskDetails(updateData);
-                element.textContent = newValue;
+            if (newValue && newValue !== currentValue) {
+                await apiCall('update_task', 'POST', { id: taskId, [field]: newValue });
+                if (onSaveCallback) {
+                    onSaveCallback(newValue);
+                } else {
+                    element.textContent = newValue;
+                    input.replaceWith(element);
+                }
             } else {
-                element.textContent = currentValue;
+                if (onSaveCallback) {
+                    onSaveCallback(currentValue);
+                } else {
+                    element.textContent = currentValue;
+                    input.replaceWith(element);
+                }
             }
-            input.replaceWith(element);
         };
 
         input.addEventListener('blur', saveChanges);
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                input.blur(); // Trigger blur to save changes
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') input.blur();
+            if (e.key === 'Escape') {
+                input.value = currentValue;
+                input.blur();
             }
         });
     }
 
-    async function makeColorEditable(cardElement, taskId, currentColor) {
-        // Prevent multiple color edits
-        if (cardElement.querySelector('.color-edit-palette')) return;
+    function makeColorEditable(cardElement, taskId, currentColor) {
+        if (document.querySelector('.color-edit-palette')) return; // Prevent multiple palettes
 
         const palette = document.createElement('div');
-        palette.classList.add('color-edit-palette');
-
-        const colors = [
-            '#ffffff', '#ffcccc', '#ccffcc', '#ccccff', '#ffffcc',
-            '#ffccff', '#ccffff', '#ff99cc', '#99ff99', '#99ccff'
-        ];
+        palette.className = 'color-edit-palette';
+        const colors = ['#ffffff', '#ffcccc', '#ccffcc', '#ccccff', '#ffffcc', '#ffccff', '#ccffff'];
 
         colors.forEach(color => {
             const btn = document.createElement('button');
-            btn.classList.add('color-btn');
             btn.style.backgroundColor = color;
             btn.dataset.color = color;
-            btn.title = color; // Tooltip for color
-            if (color === currentColor) {
-                btn.classList.add('active');
-            }
+            if (color === currentColor) btn.classList.add('active');
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const newColor = e.target.dataset.color;
-                await updateTaskDetails({ id: taskId, card_color: newColor });
+                await apiCall('update_task', 'POST', { id: taskId, card_color: newColor });
                 cardElement.style.borderLeft = `5px solid ${newColor}`;
-                cardElement.dataset.color = newColor;
-                // Update the color edit button's background as well
-                cardElement.querySelector('.color-edit-btn').style.backgroundColor = newColor;
-                palette.remove(); // Remove palette after selection
+                palette.remove();
             });
             palette.appendChild(btn);
         });
 
-        // Position the palette near the color edit button
-        const colorEditBtn = cardElement.querySelector('.color-edit-btn');
-        colorEditBtn.parentNode.insertBefore(palette, colorEditBtn.nextSibling);
+        cardElement.appendChild(palette);
 
-        // Remove palette if clicked outside
         const removePalette = (e) => {
-            if (!palette.contains(e.target) && e.target !== colorEditBtn) {
+            if (!palette.contains(e.target)) {
                 palette.remove();
-                document.removeEventListener('click', removePalette);
+                document.removeEventListener('click', removePalette, true);
             }
         };
-        document.addEventListener('click', removePalette);
+        setTimeout(() => document.addEventListener('click', removePalette, true), 100);
     }
-
-    async function tambahTugas(e) {
-        e.preventDefault();
-        const teksTugas = inputTugas.value.trim();
-        const cardColor = selectedColor; // Use selectedColor
-        const assigneeLabel = inputAssignee.value.trim();
-
-        if (teksTugas !== '') {
-            try {
-                const response = await fetch(api, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ teks: teksTugas, card_color: cardColor, assignee_label: assigneeLabel || null })
-                });
-                const result = await response.json();
-                if (result.status === 'success') {
-                    inputTugas.value = '';
-                    inputAssignee.value = ''; // Reset assignee
-                    // Reset color selection to default
-                    document.querySelector('.color-btn.active').classList.remove('active');
-                    document.querySelector('.color-btn[data-color="#ffffff"]').classList.add('active');
-                    selectedColor = '#ffffff';
-                    muatTugas(); // Reload all tasks to update the board
-                } else {
-                    alert('Error: ' + result.message);
-                }
-            } catch (error) {
-                alert('Gagal menyimpan tugas.');
-                console.error('Error adding task:', error);
-            }
-        }
-    }
-
-    async function hapusTugas(id) {
-        try {
-            const response = await fetch(`${api}?id=${id}`, {
-                method: 'DELETE'
-            });
-            const result = await response.json();
-            if (result.status === 'success') {
-                muatTugas();
-            } else {
-                alert('Error: ' + result.message);
-            }
-        } catch (error) {
-            alert('Gagal menghapus tugas.');
-            console.error('Error deleting task:', error);
-        }
-    }
-
-    async function updateTaskDetails(data) {
-        try {
-            const response = await fetch(`${api}?action=update`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            const result = await response.json();
-            if (result.status === 'success') {
-                console.log(`Task ${data.id} updated.`);
-            } else {
-                alert('Error updating task details: ' + result.message);
-            }
-        } catch (error) {
-            alert('Gagal memperbarui detail tugas.');
-            console.error('Error updating task details:', error);
-        }
-    }
-
-    async function updateTaskStatus(id, newStatus) {
-        try {
-            const response = await fetch(`${api}?action=update`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: id, status: newStatus })
-            });
-            const result = await response.json();
-            if (result.status === 'success') {
-                console.log(`Task ${id} moved to ${newStatus}`);
-                // No need to reload all tasks, just update the UI if needed
-            } else {
-                alert('Error updating task status: ' + result.message);
-            }
-        } catch (error) {
-            alert('Gagal memperbarui status tugas.');
-            console.error('Error updating task status:', error);
-        }
-    }
-
-    // Drag and Drop Event Listeners for Columns
-    document.querySelectorAll('.kanban-column').forEach(column => {
-        const kanbanCardsContainer = column.querySelector('.kanban-cards');
-        const newStatus = column.dataset.status;
-
-        kanbanCardsContainer.addEventListener('dragover', (e) => {
-            e.preventDefault(); // Allow drop
-            const afterElement = getDragAfterElement(kanbanCardsContainer, e.clientY);
-            const draggable = document.querySelector('.dragging');
-            if (draggable && afterElement == null) {
-                kanbanCardsContainer.appendChild(draggable);
-            } else if (draggable) {
-                kanbanCardsContainer.insertBefore(draggable, afterElement);
-            }
-        });
-
-        kanbanCardsContainer.addEventListener('drop', () => {
-            if (draggedCard) {
-                const taskId = draggedCard.dataset.id;
-                const oldStatus = draggedCard.dataset.status;
-
-                if (oldStatus !== newStatus) {
-                    updateTaskStatus(taskId, newStatus);
-                    draggedCard.dataset.status = newStatus; // Update card's dataset
-                    // Optionally, update the 'selesai' status if moving to/from 'done'
-                    if (newStatus === 'done') {
-                        draggedCard.classList.add('selesai');
-                        draggedCard.querySelector('.card-text').classList.add('selesai');
-                        // We don't need to call updateTaskStatus again for 'selesai' here
-                        // as the main status update handles it implicitly if needed.
-                    } else if (oldStatus === 'done') {
-                        draggedCard.classList.remove('selesai');
-                        draggedCard.querySelector('.card-text').classList.remove('selesai');
-                        // Same as above, no extra call needed.
-                    }
-                }
-            }
-        });
-    });
-
-    // Helper function for drag and drop to get element to insert after
-    function getDragAfterElement(container, y) {
-        const draggableElements = [...container.querySelectorAll('.kanban-card:not(.dragging)')];
-
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
-    // Event listener for color buttons
-    colorPickerButtons.addEventListener('click', (e) => {
-        if (e.target.classList.contains('color-btn')) {
-            // Remove active class from previously selected button
-            const currentActive = colorPickerButtons.querySelector('.color-btn.active');
-            if (currentActive) {
-                currentActive.classList.remove('active');
-            }
-            // Add active class to clicked button
-            e.target.classList.add('active');
-            selectedColor = e.target.dataset.color;
-        }
-    });
-
-    formTugas.addEventListener('submit', tambahTugas);
-
-    // Panggil fungsi untuk memeriksa status login saat halaman dimuat
-    checkLoginStatus();
 });
